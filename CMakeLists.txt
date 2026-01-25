@@ -32,14 +32,7 @@ message("Build type: " ${CMAKE_BUILD_TYPE})
 enable_language(C ASM)
 
 # Create an executable object type
-add_executable(${CMAKE_PROJECT_NAME}
-        Bsp/Src/bsp_init.c
-        Bsp/Inc/bsp_init.h
-        Bsp/Src/m3508_speed.c
-        Bsp/Inc/m3508_speed.h
-        App/Src/InitTask.c
-        App/Inc/InitTask.h
-)
+add_executable(${CMAKE_PROJECT_NAME})
 
 # Add STM32CubeMX generated sources
 add_subdirectory(cmake/stm32cubemx)
@@ -54,10 +47,11 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
         ${CMAKE_SOURCE_DIR}/Bsp/Src/bsp_can.c
         ${CMAKE_SOURCE_DIR}/Bsp/Src/m3508_ctrl.c
+        ${CMAKE_SOURCE_DIR}/Bsp/Src/m3508_speed.c
         ${CMAKE_SOURCE_DIR}/Bsp/Src/ws2812.c
         ${CMAKE_SOURCE_DIR}/Bsp/Src/timer.c
-        ${CMAKE_SOURCE_DIR}/Bsp/Src/m3508_speed.c
         ${CMAKE_SOURCE_DIR}/Bsp/Src/bsp_init.c
+
         ${CMAKE_SOURCE_DIR}/App/Src/HUB75Task.c
         ${CMAKE_SOURCE_DIR}/App/Src/RandomDataTask.c
         ${CMAKE_SOURCE_DIR}/App/Src/WS2812Task.c
