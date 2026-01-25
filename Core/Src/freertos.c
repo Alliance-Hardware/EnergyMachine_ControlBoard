@@ -52,6 +52,41 @@ osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
   .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityLow,
+};
+/* Definitions for WS2812Task */
+osThreadId_t WS2812TaskHandle;
+const osThreadAttr_t WS2812Task_attributes = {
+  .name = "WS2812Task",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityAboveNormal1,
+};
+/* Definitions for RandomDataTask */
+osThreadId_t RandomDataTaskHandle;
+const osThreadAttr_t RandomDataTask_attributes = {
+  .name = "RandomDataTask",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityAboveNormal,
+};
+/* Definitions for M3508Task */
+osThreadId_t M3508TaskHandle;
+const osThreadAttr_t M3508Task_attributes = {
+  .name = "M3508Task",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityAboveNormal3,
+};
+/* Definitions for InitTask */
+osThreadId_t InitTaskHandle;
+const osThreadAttr_t InitTask_attributes = {
+  .name = "InitTask",
+  .stack_size = 256 * 4,
+  .priority = (osPriority_t) osPriorityRealtime7,
+};
+/* Definitions for HUB75Task */
+osThreadId_t HUB75TaskHandle;
+const osThreadAttr_t HUB75Task_attributes = {
+  .name = "HUB75Task",
+  .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
 
@@ -61,6 +96,11 @@ const osThreadAttr_t defaultTask_attributes = {
 /* USER CODE END FunctionPrototypes */
 
 void StartDefaultTask(void *argument);
+extern void StartWS2812Task(void *argument);
+extern void StartRandomDataTask(void *argument);
+extern void StartM3508ControlTask(void *argument);
+extern void StartInitTask(void *argument);
+extern void StartHUB75Task(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -93,6 +133,21 @@ void MX_FREERTOS_Init(void) {
   /* Create the thread(s) */
   /* creation of defaultTask */
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+
+  /* creation of WS2812Task */
+  WS2812TaskHandle = osThreadNew(StartWS2812Task, NULL, &WS2812Task_attributes);
+
+  /* creation of RandomDataTask */
+  RandomDataTaskHandle = osThreadNew(StartRandomDataTask, NULL, &RandomDataTask_attributes);
+
+  /* creation of M3508Task */
+  M3508TaskHandle = osThreadNew(StartM3508ControlTask, NULL, &M3508Task_attributes);
+
+  /* creation of InitTask */
+  InitTaskHandle = osThreadNew(StartInitTask, NULL, &InitTask_attributes);
+
+  /* creation of HUB75Task */
+  HUB75TaskHandle = osThreadNew(StartHUB75Task, NULL, &HUB75Task_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */

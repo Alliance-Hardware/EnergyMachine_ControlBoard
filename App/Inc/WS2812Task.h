@@ -1,0 +1,8 @@
+//
+// Created by MECHREUO on 2026/1/22.
+//
+
+#ifndef STM32F105_FR_WS2812TASK_H
+#define STM32F105_FR_WS2812TASK_H
+
+#endif //STM32F105_FR_WS2812TASK_H
