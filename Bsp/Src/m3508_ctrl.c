@@ -1,7 +1,6 @@
-#include "m3508_ctrl.h"
 #include <math.h>
 #include <string.h>
-
+#include "m3508_ctrl.h"
 // 内部全局变量
 static M3508_Handle_t **g_motors = NULL;
 static uint8_t g_motor_count = 0;

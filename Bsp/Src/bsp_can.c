@@ -1,9 +1,7 @@
 #include "can.h"
 #include "main.h"
-// USER
-#include "bsp_can.h"
 #include "m3508_ctrl.h"
-
+#include "bsp_can.h"
 #ifdef CAN
 /* ---------- CAN 配置 ---------- */
 CAN_RxFrame_TypeDef CanRxFrame;

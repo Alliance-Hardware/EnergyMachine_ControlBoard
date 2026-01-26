@@ -1,12 +1,7 @@
-//
-// Created by MECHREUO on 2026/1/25.
-//
-
-#include "bsp_init.h"
 #include "bsp_can.h"
 #include "m3508_ctrl.h"
 #include "ws2812.h"
-
+#include "bsp_init.h"
 M3508_Handle_t motor1;
 
 void can_init(){

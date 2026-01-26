@@ -1,9 +1,9 @@
-#include "InitTask.h"
 #include "FreeRTOS.h"
 #include "task.h"
 #include "bsp_init.h"
 #include "cmsis_os2.h"
 #include "HUB75Task.h"
+#include "InitTask.h"
 void StartInitTask(void *argument){
 	osDelay(50);
 	ws2812_init();

@@ -1,8 +1,8 @@
-#include "main.h"
 #include "FreeRTOS.h"
+#include "cmsis_os2.h"
+#include "main.h"
 #include "task.h"
 #include "projdefs.h"
-#include "cmsis_os2.h"
 #include "HUB75Task.h"
 #include "timer.h"
 extern osThreadId_t HUB75TaskHandle;

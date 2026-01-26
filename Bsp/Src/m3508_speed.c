@@ -1,7 +1,3 @@
-//
-// Created by MECHREUO on 2026/1/25.
-//
-
 #include "m3508_speed.h"
 #include <math.h>
 #include <stdbool.h>

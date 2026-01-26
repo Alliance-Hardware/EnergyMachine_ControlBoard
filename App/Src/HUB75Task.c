@@ -1,7 +1,6 @@
-#include "HUB75Task.h"
 #include "FreeRTOS.h"
 #include <string.h>
-
+#include "HUB75Task.h"
 EnergyMachine_t em = {0};
 EnergyMachine_t *energy_machine = &em;
 
