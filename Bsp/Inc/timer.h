@@ -4,6 +4,7 @@
 #define TIME_20S_MS 20000			//20s
 #define TIME_SUCCESS_TO_IDLE 10000	//10s
 #include <stdint.h>
+#include "stm32f1xx_hal.h"
 uint32_t get_time();
 void TIM_Callback(TIM_HandleTypeDef *htim);
 #define STM32F105_FR_TIMER_H
