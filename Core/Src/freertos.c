@@ -89,6 +89,13 @@ const osThreadAttr_t HUB75Task_attributes = {
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
+/* Definitions for ErrorHandlerTask */
+osThreadId_t ErrorHandlerTaskHandle;
+const osThreadAttr_t ErrorHandlerTask_attributes = {
+  .name = "ErrorHandlerTask",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityRealtime,
+};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -101,6 +108,7 @@ extern void StartRandomDataTask(void *argument);
 extern void StartM3508ControlTask(void *argument);
 extern void StartInitTask(void *argument);
 extern void StartHUB75Task(void *argument);
+extern void StartErrorHandlerTask(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -148,6 +156,9 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of HUB75Task */
   HUB75TaskHandle = osThreadNew(StartHUB75Task, NULL, &HUB75Task_attributes);
+
+  /* creation of ErrorHandlerTask */
+  ErrorHandlerTaskHandle = osThreadNew(StartErrorHandlerTask, NULL, &ErrorHandlerTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */

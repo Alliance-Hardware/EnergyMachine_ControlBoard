@@ -22,24 +22,22 @@ typedef enum {
 // 全局状态机结构体
 typedef struct {
 	EnergyMachine_State_t state;
-	uint8_t activated_count;       // 已成功激活次数
-	uint8_t last_leaf_ids[5];      // 记录点亮的符叶ID
-	bool is_big;                   // 标志当前是大符还是小符模式
+	uint8_t activated_count;        // 已成功激活次数
+	uint8_t last_leaf_ids[2];       // 记录点亮的符叶ID
+	uint16_t ring[10];			    // 记录每次打击的环数
+	uint8_t ring_sum;			    // 记录打击环数和
+	uint16_t timer_1s;			    // 1s定时器
+	uint16_t timer_2_5s;		    // 2.5s定时器
+	uint16_t timer_20s;				// 20s定时器
+	uint16_t timer_SuccessToIdle;
 } EnergyMachine_t;
-
-typedef struct {
-	uint16_t timer_1s;     // 1s定时器
-	uint16_t timer_2_5s;   // 2.5s定时器
-	uint16_t timer_20s;    // 20s定时器
-} EnergyMachine_timer;
-
 // 全局变量声明
-extern EnergyMachine_t em;
-extern EnergyMachine_timer em_timer;
-
+extern EnergyMachine_t *energy_machine;
 // 函数声明
+void EnergyMachine_Init(EnergyMachine_t *machine);
 void HUB75_CAN_RxCallback(uint16_t std_id, uint8_t *data);
 void HUB_TIM_CallBack(void);
 void HUB75_Init(void);
+void StartHUB75Task(void *argument);
 
 #endif //STM32F105_FR_HUB75TASK_H

@@ -1,0 +1,4 @@
+#ifndef STM32F105_FR_ERRORHANDLERTASK_H
+#define STM32F105_FR_ERRORHANDLERTASK_H
+void StartErrorHandlerTask(void *argument);
+#endif //STM32F105_FR_ERRORHANDLERTASK_H

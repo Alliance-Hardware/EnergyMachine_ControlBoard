@@ -1,5 +1,6 @@
-//
-// Created by MECHREUO on 2026/1/22.
-//
+#include "WS2812Task.h"
+#include "FreeRTOS.h"
+void StartWS2812Task(void *argument)
+{
 
-#include "../Inc/WS2812Task.h"
+}

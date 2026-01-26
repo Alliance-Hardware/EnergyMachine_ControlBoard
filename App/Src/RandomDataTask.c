@@ -1,5 +1,6 @@
-//
-// Created by MECHREUO on 2026/1/22.
-//
+#include "RandomDataTask.h"
+#include "FreeRTOS.h"
+void StartRandomDataTask(void *argument)
+{
 
-#include "../Inc/RandomDataTask.h"
+}

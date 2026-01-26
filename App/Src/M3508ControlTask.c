@@ -1,18 +1,17 @@
-#include "M3508ControlTask.h"
-#include <math.h>
-#include <stdbool.h>
-#include "HUB75Task.h"
 #include "FreeRTOS.h"
 #include "task.h"
+#include <math.h>
+#include "M3508ControlTask.h"
+#include "HUB75Task.h"
 #include "m3508_ctrl.h"
 #include "m3508_speed.h"
-#include "bsp_init.h"
+extern M3508_Handle_t motor1;
 
 void StartM3508ControlTask(void *argument){
 	for (;;)
 	{
 		ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-		switch (em.state)
+		switch (energy_machine->state)
 		{
 			case EM_STATE_SMALL_IDLE:
 			case EM_STATE_SMALL_ACTIVATING:

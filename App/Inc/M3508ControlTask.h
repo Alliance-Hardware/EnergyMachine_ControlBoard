@@ -1,4 +1,4 @@
 #ifndef STM32F105_FR_SPEEDCONTROLTASK_H
 #define STM32F105_FR_SPEEDCONTROLTASK_H
 void StartM3508ControlTask(void *argument);
-#endif //STM32F105_FR_SPEEDCONTROLTASK_H
+#endif

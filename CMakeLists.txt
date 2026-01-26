@@ -57,6 +57,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
         ${CMAKE_SOURCE_DIR}/App/Src/WS2812Task.c
         ${CMAKE_SOURCE_DIR}/App/Src/M3508ControlTask.c
         ${CMAKE_SOURCE_DIR}/App/Src/InitTask.c
+        ${CMAKE_SOURCE_DIR}/App/Src/ErrorHandlerTask.c
 
 )
 

@@ -7,6 +7,8 @@
 #include "m3508_ctrl.h"
 #include "ws2812.h"
 
+M3508_Handle_t motor1;
+
 void can_init(){
 	BSP_CAN_Init();
 }
