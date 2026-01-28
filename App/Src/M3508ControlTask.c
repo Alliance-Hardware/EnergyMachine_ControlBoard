@@ -6,11 +6,16 @@
 #include "m3508_ctrl.h"
 #include "m3508_speed.h"
 extern M3508_Handle_t motor1;
-
+static volatile uint32_t time_1ms = 0;
+uint32_t get_time()
+{
+	return time_1ms;
+}
 void StartM3508ControlTask(void *argument){
 	for (;;)
 	{
 		ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+		time_1ms++;
 		switch (energy_machine->state)
 		{
 			case EM_STATE_SMALL_IDLE:

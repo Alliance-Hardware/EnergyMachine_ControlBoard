@@ -2,6 +2,8 @@
 #include "main.h"
 #include "m3508_ctrl.h"
 #include "bsp_can.h"
+#include "FreeRTOS.h"
+#include "HUB75Task.h"
 #ifdef CAN
 /* ---------- CAN 配置 ---------- */
 CAN_RxFrame_TypeDef CanRxFrame;
@@ -194,15 +196,15 @@ void BSP_CAN_SendMsg(CAN_HandleTypeDef *hcan, uint16_t id, uint8_t *tx_data) {
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
 #ifndef CAN
   if (hcan == &hcan1) {
-    // CAN_RxHeaderTypeDef rx1_header;
-    // uint8_t rx1_data[8];
-    // HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rx1_header, rx1_data);
-    // HUB75_CAN_RxCallback(rx1_header.StdId, rx1_data); // 传入标识符和数据
+    CAN_RxHeaderTypeDef rx1_header;
+    uint8_t rx1_data[8];
+    HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rx1_header, rx1_data);
+    HUB75_CAN_RxCallback(rx1_header.StdId, rx1_data); // 传入标识符和数据
   } else if (hcan == &hcan2) {
-    // CAN_RxHeaderTypeDef rx_header;
-    // uint8_t rx_data[8];
-    // HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rx_header, rx_data);
-    // M3508_CAN_RxCallback(rx_header.StdId, rx_data); // 传入标识符和数据
+    CAN_RxHeaderTypeDef rx_header;
+    uint8_t rx_data[8];
+    HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rx_header, rx_data);
+    M3508_CAN_RxCallback(rx_header.StdId, rx_data); // 传入标识符和数据
   }
 #endif
 
