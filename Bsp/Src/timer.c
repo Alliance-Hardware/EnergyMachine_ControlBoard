@@ -18,7 +18,7 @@ void TIM_Callback(TIM_HandleTypeDef *htim) {
 		vTaskNotifyGiveFromISR((TaskHandle_t)M3508TaskHandle, &xHigherPriorityTaskWoken_M3508);
 		// HUB75定时器任务通知
 		xTaskNotifyFromISR((TaskHandle_t)HUB75TaskHandle, TIMER_CALLBACK,
-			eSetValueWithOverwrite, &xHigherPriorityTaskWoken_HUB75);
+			eSetBits, &xHigherPriorityTaskWoken_HUB75);
 		//判断是否抢占
 		if (xHigherPriorityTaskWoken_M3508 == pdTRUE ||
 			xHigherPriorityTaskWoken_HUB75 == pdTRUE){

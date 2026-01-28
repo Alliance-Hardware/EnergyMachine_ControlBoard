@@ -6,7 +6,8 @@
 #define STM32F105_FR_HUB75TASK_H
 #include <stdint.h>
 #include <stdbool.h>
-#define CAN_CALLBACK 1
+#define CAN_CALLBACK (1 << 0)
+#define TIMER_CALLBACK (1 << 1)
 // 状态枚举
 typedef enum {
 	EM_STATE_INACTIVE,           // 未激活状态
