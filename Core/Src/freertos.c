@@ -25,7 +25,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "HUB75Task.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -59,21 +59,14 @@ osThreadId_t WS2812TaskHandle;
 const osThreadAttr_t WS2812Task_attributes = {
   .name = "WS2812Task",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityAboveNormal1,
-};
-/* Definitions for RandomDataTask */
-osThreadId_t RandomDataTaskHandle;
-const osThreadAttr_t RandomDataTask_attributes = {
-  .name = "RandomDataTask",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityAboveNormal,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for M3508Task */
 osThreadId_t M3508TaskHandle;
 const osThreadAttr_t M3508Task_attributes = {
   .name = "M3508Task",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityAboveNormal3,
+  .priority = (osPriority_t) osPriorityHigh1,
 };
 /* Definitions for InitTask */
 osThreadId_t InitTaskHandle;
@@ -87,14 +80,14 @@ osThreadId_t HUB75TaskHandle;
 const osThreadAttr_t HUB75Task_attributes = {
   .name = "HUB75Task",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
+  .priority = (osPriority_t) osPriorityAboveNormal,
 };
 /* Definitions for ErrorHandlerTask */
 osThreadId_t ErrorHandlerTaskHandle;
 const osThreadAttr_t ErrorHandlerTask_attributes = {
   .name = "ErrorHandlerTask",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityRealtime,
+  .priority = (osPriority_t) osPriorityHigh7,
 };
 /* Definitions for CANToHUBQueue */
 osMessageQueueId_t CANToHUBQueueHandle;
@@ -109,7 +102,6 @@ const osMessageQueueAttr_t CANToHUBQueue_attributes = {
 
 void StartDefaultTask(void *argument);
 extern void StartWS2812Task(void *argument);
-extern void StartRandomDataTask(void *argument);
 extern void StartM3508ControlTask(void *argument);
 extern void StartInitTask(void *argument);
 extern void StartHUB75Task(void *argument);
@@ -141,7 +133,7 @@ void MX_FREERTOS_Init(void) {
 
   /* Create the queue(s) */
   /* creation of CANToHUBQueue */
-  CANToHUBQueueHandle = osMessageQueueNew (16, sizeof(CANCallBack*), &CANToHUBQueue_attributes);
+  CANToHUBQueueHandle = osMessageQueueNew (16, sizeof(CANMessage*), &CANToHUBQueue_attributes);
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
@@ -153,9 +145,6 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of WS2812Task */
   WS2812TaskHandle = osThreadNew(StartWS2812Task, NULL, &WS2812Task_attributes);
-
-  /* creation of RandomDataTask */
-  RandomDataTaskHandle = osThreadNew(StartRandomDataTask, NULL, &RandomDataTask_attributes);
 
   /* creation of M3508Task */
   M3508TaskHandle = osThreadNew(StartM3508ControlTask, NULL, &M3508Task_attributes);

@@ -6,6 +6,7 @@
 #include "queue.h"
 #include "stm32f1xx_hal_can.h"
 #include "timer.h"
+#include "RandomData.h"
 EnergyMachine_t em = {0};
 EnergyMachine_t *energy_machine = &em;
 extern osThreadId_t HUB75TaskHandle;
@@ -15,10 +16,12 @@ void EnergyMachine_Init(EnergyMachine_t *machine) {
 	if (machine == NULL) {
 		return;  // 防御性编程，防止空指针
 	}
+	uint8_t init_ids[5] = {0, 1, 2, 3, 4};
 	machine->state = EM_STATE_INACTIVE;
 	machine->activated_count = 0;
 	machine->ring_sum = 0;
-	memset(machine->current_leaf_ids, 0, sizeof(machine->current_leaf_ids));
+	memset(machine->selected_leaf_ids, 0, sizeof(machine->selected_leaf_ids));
+	memcpy(machine->unselected_leaf_ids, init_ids, sizeof(init_ids));
 	memset(machine->ring, 0, sizeof(machine->ring));
 	machine->timer_1s = 0;
 	machine->timer_2_5s = 0;
@@ -27,7 +30,7 @@ void EnergyMachine_Init(EnergyMachine_t *machine) {
 
 void HUB75_CAN_RxCallback(uint16_t std_id, uint8_t *data)
 {
-	CANCallBack* can_message = pvPortMalloc(sizeof(CANCallBack));
+	CANMessage* can_message = pvPortMalloc(sizeof(CANMessage));
 	// 拷贝数据
 	can_message->id = std_id;
 	memcpy(can_message->data, data, 8);
@@ -42,6 +45,10 @@ void HUB75_CAN_RxCallback(uint16_t std_id, uint8_t *data)
 		vTaskNotifyGiveFromISR(ErrorHandlerTaskHandle,&xHigherPriorityTaskWoken_ERROR_HANDLER);
 		portYIELD_FROM_ISR(xHigherPriorityTaskWoken_ERROR_HANDLER);
 	}
+}
+
+void IsRightTarget() {
+
 }
 
 void StartHUB75Task(void *argument)
@@ -75,23 +82,23 @@ void StartHUB75Task(void *argument)
 			default:
 				break;
 			}
-		}
-		// 检查定时器超时问题
-		if (energy_machine->timer_20s >= TIME_20S_MS){
+			// 检查定时器超时问题
+			if (energy_machine->timer_20s >= TIME_20S_MS){
 
-		}
-		else if (energy_machine->timer_2_5s >= TIME_2_5S_MS){
+			}
+			else if (energy_machine->timer_2_5s >= TIME_2_5S_MS){
 
-		}
-		else if (energy_machine->timer_1s >= TIME_1S_MS) {
+			}
+			else if (energy_machine->timer_1s >= TIME_1S_MS) {
 
-		}
-		else if (energy_machine->timer_SuccessToIdle >= TIME_SUCCESS_TO_IDLE) {
+			}
+			else if (energy_machine->timer_SuccessToIdle >= TIME_SUCCESS_TO_IDLE) {
 
+			}
 		}
 		// 检查是否触发CAN中断
 		if ((pulNotificationValue & CAN_CALLBACK) != 0){
-			CANCallBack* can_message;
+			CANMessage* can_message;
 			while (xQueueReceive(CANToHUBQueueHandle, &can_message, 0) == pdPASS) {
 
 				vPortFree(can_message);

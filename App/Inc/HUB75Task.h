@@ -24,7 +24,8 @@ typedef enum {
 typedef struct {
 	EnergyMachine_State_t state;	// 激活状态
 	uint8_t activated_count;        // 已成功激活次数
-	uint8_t current_leaf_ids[2];    // 当前需要被击打的符叶ID
+	uint8_t selected_leaf_ids[2];   // 当前需要被击打的符叶ID
+	uint8_t unselected_leaf_ids[5];	// 当前未被选中的符叶ID
 	uint16_t ring[10];			    // 记录每次打击的环数
 	uint8_t ring_sum;			    // 记录打击环数和
 	uint16_t timer_1s;			    // 1s定时器
@@ -36,7 +37,7 @@ typedef struct {
 typedef struct{
 	uint16_t id;
 	uint8_t data[8];
-}CANCallBack;
+}CANMessage;
 // 全局变量声明
 extern EnergyMachine_t *energy_machine;
 // 函数声明
