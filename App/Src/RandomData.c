@@ -20,9 +20,18 @@ uint8_t GetRandomData(uint8_t* in, uint8_t* out, uint8_t num) {
     for (uint8_t i = 0; i < 5; i++) {
         // 检查当前元素是否为0
         if (in[i] != 0) {
-            // 如果不为0，将其存入valid数组
-            valid[cnt] = in[i];
-            cnt++;  // 计数器加1
+            uint8_t is_in_out = 0;
+            for (uint8_t j = 0; j < 2; j++) {
+                if (out[j] == in[i]) {
+                    is_in_out = 1;
+                    break;
+                }
+            }
+            // 如果不为0，而且和out的数据不同,将其存入valid数组
+            if (!is_in_out) {
+                valid[cnt] = in[i];
+                cnt++;  // 计数器加1
+            }
         }
     }
 

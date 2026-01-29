@@ -24,13 +24,15 @@ typedef enum {
 typedef struct {
 	EnergyMachine_State_t state;	// 激活状态
 	uint8_t activated_count;        // 已成功激活次数
-	uint8_t selected_leaf_ids[2];   // 当前需要被击打的符叶ID
+	uint8_t result_leaf_ids[2];		// 选中结果输出,并记录上次选中结果
+	uint8_t selected_leaf_ids[5];   // 当前需要被击打的符叶ID
 	uint8_t unselected_leaf_ids[5];	// 当前未被选中的符叶ID
 	uint16_t ring[10];			    // 记录每次打击的环数
 	uint8_t ring_sum;			    // 记录打击环数和
 	uint16_t timer_1s;			    // 1s定时器
 	uint16_t timer_2_5s;		    // 2.5s定时器
 	uint16_t timer_20s;				// 20s定时器
+	uint16_t timer_InactiveToStart;	// 未激活时判断进入哪一个状态(小能量&大能量)
 	uint16_t timer_SuccessToIdle;	// 激活后显示时间定时器
 } EnergyMachine_t;
 

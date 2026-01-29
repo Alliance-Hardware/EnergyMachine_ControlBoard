@@ -1,7 +1,9 @@
 #ifndef STM32F105_FR_CONFIG_H
 #define STM32F105_FR_CONFIG_H
+#define CAN_ID				0x500
+#define CAN_RECEIVE_BASE_ID 0x400
 #define SMALL_EM			0xAA
-#define BIG_EM				0xFF
+#define BIG_EM				0xBB
 #define Display_Disable		0x00
 #define Ring_1				0X01
 #define Ring_2				0x02

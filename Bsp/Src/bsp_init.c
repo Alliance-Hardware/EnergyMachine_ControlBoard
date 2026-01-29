@@ -34,7 +34,6 @@ void m3508_init()
 void timer_init()
 {
 	HAL_TIM_Base_Start_IT(&htim3);
-	HAL_TIM_Base_Start_IT(&htim4);
 }
 
 void ws2812_init()
