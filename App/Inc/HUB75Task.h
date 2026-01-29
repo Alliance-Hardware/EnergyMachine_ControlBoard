@@ -23,12 +23,13 @@ typedef enum {
 // 全局状态机结构体
 typedef struct {
 	EnergyMachine_State_t state;	// 激活状态
-	uint8_t activated_count;        // 已成功激活次数
+	uint8_t counter;				// 记录显示过的符叶总数
+	uint8_t counter_success;		// 记录成功击打的符叶数量
+	uint8_t ring_sum;			    // 记录打击环数和
+	uint8_t ring[10];			    // 记录每次打击的环数
 	uint8_t result_leaf_ids[2];		// 选中结果输出,并记录上次选中结果
 	uint8_t selected_leaf_ids[5];   // 当前需要被击打的符叶ID
 	uint8_t unselected_leaf_ids[5];	// 当前未被选中的符叶ID
-	uint16_t ring[10];			    // 记录每次打击的环数
-	uint8_t ring_sum;			    // 记录打击环数和
 	uint16_t timer_1s;			    // 1s定时器
 	uint16_t timer_2_5s;		    // 2.5s定时器
 	uint16_t timer_20s;				// 20s定时器
