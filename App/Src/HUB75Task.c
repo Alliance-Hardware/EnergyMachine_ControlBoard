@@ -37,6 +37,12 @@ void EnergyMachine_Init(EnergyMachine_t *machine) {
 void HUB75_CAN_RxCallback(uint16_t std_id, uint8_t *data)
 {
 	CANMessage* can_message = pvPortMalloc(sizeof(CANMessage));
+	if (can_message == NULL) {
+		BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+		vTaskNotifyGiveFromISR(ErrorHandlerTaskHandle, &xHigherPriorityTaskWoken);
+		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+		return;
+	}
 	// 拷贝数据
 	can_message->id = std_id;
 	memcpy(can_message->data, data, 8);
@@ -54,10 +60,13 @@ void HUB75_CAN_RxCallback(uint16_t std_id, uint8_t *data)
 }
 
 uint8_t IsRightTarget(CANMessage* can_message) {
-	if (can_message->id - CAN_RECEIVE_BASE_ID ==
-								energy_machine->selected_leaf_ids[can_message->id - CAN_RECEIVE_BASE_ID -3]) {
-		energy_machine->selected_leaf_ids[can_message->id - CAN_RECEIVE_BASE_ID -3] = 0;
-		return 1;
+	uint8_t index = can_message->id - CAN_RECEIVE_BASE_ID;
+	// 防御性检查
+	if (index >= 3 && index <= 7) {
+		if (index == energy_machine->selected_leaf_ids[index -3]) {
+			energy_machine->selected_leaf_ids[index -3] = 0;
+			return 1;
+		}
 	}
 	return 0;
 }
@@ -185,11 +194,18 @@ void ResetToIdle(EnergyMachine_t *machine) {
 }
 
 void ResetToInactive() {
-	// CANMessage* can_message;
-	// EnergyMachine_Init(energy_machine);
-	// while (xQueueReceive(CANToHUBQueueHandle, &can_message, 0) == pdPASS) {
-	// 	vPortFree(can_message);
-	// }
+	// 进入临界区
+	taskENTER_CRITICAL();
+	xTaskNotify(HUB75TaskHandle, RESET_FLAG, eSetBits);
+	CANMessage* can_message;
+	// 清空队列消息
+	while (xQueueReceive(CANToHUBQueueHandle, &can_message, 0) == pdPASS) {
+		if (can_message != NULL) {
+			vPortFree(can_message);
+		}
+	}
+	// 退出临界区
+	taskEXIT_CRITICAL();
 }
 
 void StartHUB75Task(void *argument)
@@ -197,8 +213,14 @@ void StartHUB75Task(void *argument)
 	for (;;) {
 		uint32_t pulNotificationValue = 0;
 		// 等待任务通知
-		xTaskNotifyWait(0, TIMER_CALLBACK | CAN_CALLBACK,
+		xTaskNotifyWait(0, TIMER_CALLBACK | CAN_CALLBACK | RESET_FLAG,
 			&pulNotificationValue, portMAX_DELAY);
+		// 检查是否触发复位中的
+		if ((pulNotificationValue & RESET_FLAG) != 0) {
+			// 丢弃当前处理的所有消息
+			EnergyMachine_Init(energy_machine);
+			continue;  // 跳过本次循环
+		}
 		// 检查是否触发定时器中断
 		if ((pulNotificationValue & TIMER_CALLBACK) != 0){
 			// 判断当前状态,决定定时器自增情况
@@ -232,8 +254,9 @@ void StartHUB75Task(void *argument)
 			if (energy_machine->timer_20s >= TIME_20S_MS){
 				energy_machine->timer_20s = 0;
 				ResetToInactive();
+				continue;
 			}
-			else if (energy_machine->timer_2_5s >= TIME_2_5S_MS){
+			if (energy_machine->timer_2_5s >= TIME_2_5S_MS){
 				energy_machine->timer_2_5s = 0;
 				ResetToIdle(energy_machine);
 			}
@@ -252,15 +275,18 @@ void StartHUB75Task(void *argument)
 				}
 			}
 			else if (energy_machine->timer_InactiveToStart >=  TIME_INACTIVE_TO_START) {
-				energy_machine->timer_InactiveToStart = 0;
-				energy_machine->state = EM_STATE_SMALL_IDLE;
-				if (Small_EM_CANSend() != 1) {
-					xTaskNotifyGive(ErrorHandlerTaskHandle);
+				if (energy_machine->state == EM_STATE_INACTIVE ) {
+					energy_machine->timer_InactiveToStart = 0;
+					energy_machine->state = EM_STATE_SMALL_IDLE;
+					if (Small_EM_CANSend() != 1) {
+						xTaskNotifyGive(ErrorHandlerTaskHandle);
+					}
 				}
 			}
 			if (energy_machine->timer_SuccessToIdle == 0) {
 				if (energy_machine->state == EM_STATE_SMALL_SUCCESS || energy_machine->state == EM_STATE_BIG_SUCCESS) {
 					ResetToInactive();
+					continue;
 				}
 			}
 		}
@@ -276,8 +302,8 @@ void StartHUB75Task(void *argument)
 							if (energy_machine->timer_InactiveToStart == 0) {
 								energy_machine->timer_InactiveToStart = 1;
 							}
-							// 若在1s后再次击打,进入大能量机关状态.
-							if (energy_machine->timer_InactiveToStart >= 1000) {
+							// 延时1s滤波,若1s后再次击打,进入大能量机关状态.
+							if (energy_machine->timer_InactiveToStart >= 1001) {
 								energy_machine->timer_InactiveToStart = 0;
 								energy_machine->state = EM_STATE_BIG_IDLE;
 								if (Big_EM_CANSend() != 1) {
@@ -295,9 +321,12 @@ void StartHUB75Task(void *argument)
 								energy_machine->ring[energy_machine->counter - 1] = can_message->data[0];
 								energy_machine->ring_sum += can_message->data[0];
 								// 判断是否满足退出条件
-								if (Small_EM_CANSend() == 0 || energy_machine->counter == 5) {
+								if (energy_machine->counter == 5) {
 									GetGainTime(&energy_machine->timer_SuccessToIdle);
 									energy_machine->state = EM_STATE_SMALL_SUCCESS;
+								}
+								else if (Small_EM_CANSend() == 0) {
+									xTaskNotifyGive(ErrorHandlerTaskHandle);
 								}
 							}
 							// 错误击打,回到IDLE状态
@@ -335,6 +364,7 @@ void StartHUB75Task(void *argument)
 								energy_machine->timer_1s = 0;
 								energy_machine->state = EM_STATE_BIG_ACTIVATING_25;
 								energy_machine->ring[energy_machine->counter - 1] = 0;
+								// 无需重置counter_success
 							}
 							// 判断是否满足退出条件
 							if (energy_machine->counter == 10) {

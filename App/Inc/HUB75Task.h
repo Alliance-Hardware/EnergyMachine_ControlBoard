@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #define CAN_CALLBACK (1 << 0)
 #define TIMER_CALLBACK (1 << 1)
+#define RESET_FLAG (1 << 2)
 // 状态枚举
 typedef enum {
 	EM_STATE_INACTIVE,           // 未激活状态
