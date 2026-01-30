@@ -16,7 +16,6 @@ typedef enum {
 	EM_STATE_BIG_ACTIVATING_1,   // 大符正在激活 (1s阶段)
 	EM_STATE_BIG_SUCCESS         // 大符激活成功
 } EnergyMachine_State_t;
-
 // 全局状态机结构体
 typedef struct {
 	EnergyMachine_State_t state;	// 激活状态
@@ -33,7 +32,6 @@ typedef struct {
 	uint16_t timer_InactiveToStart;	// 未激活时判断进入哪一个状态(小能量&大能量)
 	uint16_t timer_SuccessToIdle;	// 激活后显示时间定时器
 } EnergyMachine_t;
-
 typedef struct{
 	uint16_t id;
 	uint8_t data[8];
@@ -46,5 +44,4 @@ void HUB75_CAN_RxCallback(uint16_t std_id, uint8_t *data);
 void HUB_TIM_CallBack(void);
 void HUB75_Init(void);
 void StartHUB75Task(void *argument);
-
-#endif //STM32F105_FR_HUB75TASK_H
+#endif

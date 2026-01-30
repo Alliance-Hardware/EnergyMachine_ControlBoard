@@ -81,7 +81,6 @@ uint8_t M3508_ChangeMotorId(M3508_Handle_t *motor, uint8_t new_id)
 
 	// 更新电机句柄中的ID
 	motor->id = new_id;
-
 	return 0; // 成功
 }
 

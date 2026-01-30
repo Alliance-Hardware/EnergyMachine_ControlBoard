@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include "m3508_ctrl.h"
 #include "timer.h"
-
 EnergyMechanism_Speed em_speed = {0};
 static bool rng_initialized = false;
 static float motor_target = 1.0f;
@@ -20,7 +19,6 @@ static void init_rng_if_needed(void) {
 // 重置函数：在进入可激活状态时调用
 void reset_energy_mechanism(void) {
 	init_rng_if_needed();
-
 	// 生成 a 和 omega
 	em_speed.a = 0.780f + (1.045f - 0.780f) * ((float)rand() / (float)RAND_MAX);
 	em_speed.omega = 1.884f + (2.000f - 1.884f) * ((float)rand() / (float)RAND_MAX);
