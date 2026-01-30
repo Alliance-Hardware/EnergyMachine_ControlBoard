@@ -302,8 +302,8 @@ void StartHUB75Task(void *argument)
 							if (energy_machine->timer_InactiveToStart == 0) {
 								energy_machine->timer_InactiveToStart = 1;
 							}
-							// 延时1s滤波,若1s后再次击打,进入大能量机关状态.
-							if (energy_machine->timer_InactiveToStart >= 1001) {
+							// 延时500ms滤波,若500ms后再次击打,进入大能量机关状态.
+							if (energy_machine->timer_InactiveToStart >= 500) {
 								energy_machine->timer_InactiveToStart = 0;
 								energy_machine->state = EM_STATE_BIG_IDLE;
 								if (Big_EM_CANSend() != 1) {
