@@ -96,9 +96,13 @@ uint8_t Small_EM_CANSend() {
 	tx_data[0] = SMALL_EM;
 	if (GetRandomData(energy_machine->unselected_leaf_ids, energy_machine->result_leaf_ids, 1) == 1) {
 		uint16_t id = CAN_ID;
+		// 把unselected_leaf_ids对应的数据复制到selected_leaf_ids
 		energy_machine->selected_leaf_ids[energy_machine->result_leaf_ids[0] - 3] = energy_machine->result_leaf_ids[0];
+		// 然后把unselected_leaf_ids数据重新置位为0.
 		energy_machine->unselected_leaf_ids[energy_machine->result_leaf_ids[0] - 3] = 0;
+		// 计数器自增
 		energy_machine->counter++;
+		// 对应的符叶设定为显示标靶并发送
 		tx_data[energy_machine->result_leaf_ids[0]] = 0xFF;
 		BSP_CAN_SendMsg(&hcan1, id, tx_data);
 		return 1;
@@ -134,6 +138,7 @@ uint8_t Big_EM_CANSend() {
 			// (300%, 50%, 500%)
 			memset(&tx_data[3], Ring_10, 5);
 		}
+		// 避免未经赋值的tx_data发送
 		if (tx_data[7] != 0) {
 			BSP_CAN_SendMsg(&hcan1, id, tx_data);
 		}
@@ -162,6 +167,8 @@ void ResetToIdle(EnergyMachine_t *machine) {
 		default:
 			return;
 	}
+	// 复位符叶
+	Init_CANSend();
 	uint8_t init_ids[5] = {3, 4, 5, 6, 7};
 	machine->counter = 0;
 	machine->counter_success = 0;
@@ -217,8 +224,10 @@ void StartHUB75Task(void *argument)
 			&pulNotificationValue, portMAX_DELAY);
 		// 检查是否触发复位中的
 		if ((pulNotificationValue & RESET_FLAG) != 0) {
-			// 丢弃当前处理的所有消息
+			// 复位energy_machine
 			EnergyMachine_Init(energy_machine);
+			// 复位符叶
+			Init_CANSend();
 			continue;  // 跳过本次循环
 		}
 		// 检查是否触发定时器中断
@@ -226,7 +235,7 @@ void StartHUB75Task(void *argument)
 			// 判断当前状态,决定定时器自增情况
 			switch (energy_machine->state){
 			case EM_STATE_INACTIVE:// 未激活状态
-				if (energy_machine->timer_InactiveToStart != 0) {
+				if (energy_machine->timer_InactiveToStart) {
 					energy_machine->timer_InactiveToStart++;
 				}
 				break;
@@ -234,10 +243,12 @@ void StartHUB75Task(void *argument)
 			case EM_STATE_BIG_IDLE:           // 大符待机
 			case EM_STATE_BIG_ACTIVATING_25:  // 大符正在激活 (2.5s阶段)
 			case EM_STATE_SMALL_ACTIVATING:   // 小符正在激活
+				// 注意:在上述几个状态转移时,及时复位timer_2_5s
 				energy_machine->timer_2_5s++;
 				energy_machine->timer_20s++;
 				break;
 			case EM_STATE_BIG_ACTIVATING_1:   // 大符正在激活 (1s阶段)
+					// 注意:在上述几个状态转移时,及时复位timer_1s
 				energy_machine->timer_1s++;
 				energy_machine->timer_20s++;
 				break;
@@ -252,31 +263,36 @@ void StartHUB75Task(void *argument)
 			}
 			// 检查定时器超时问题
 			if (energy_machine->timer_20s >= TIME_20S_MS){
-				energy_machine->timer_20s = 0;
+				energy_machine->timer_20s = 0;		// 对判断条件进行复位
 				ResetToInactive();
 				continue;
 			}
 			if (energy_machine->timer_2_5s >= TIME_2_5S_MS){
-				energy_machine->timer_2_5s = 0;
+				energy_machine->timer_2_5s = 0;		// 对判断条件进行复位
 				ResetToIdle(energy_machine);
 			}
 			else if (energy_machine->timer_1s >= TIME_1S_MS) {
-				energy_machine->timer_1s = 0;
+				energy_machine->timer_1s = 0;		// 对判断条件进行复位
 				if (energy_machine->counter == 10) {
-					energy_machine->state = EM_STATE_BIG_SUCCESS;
+					energy_machine->counter = 0;	// 对判断条件进行复位
+					energy_machine->timer_20s = 0;	//退出状态前,复位相关变量
+					energy_machine->timer_SuccessToIdle = 0;	//进入状态前,复位相关变量
 					GetGainTime(&energy_machine->timer_SuccessToIdle);
+					energy_machine->state = EM_STATE_BIG_SUCCESS;
 					Big_EM_CANSend();
 				}
 				else {
+					energy_machine->timer_2_5s = 0;		//退出状态前,复位相关变量
 					energy_machine->state = EM_STATE_BIG_ACTIVATING_25;
 					if (Big_EM_CANSend() != 1) {
 						xTaskNotifyGive(ErrorHandlerTaskHandle);
 					}
 				}
 			}
-			else if (energy_machine->timer_InactiveToStart >=  TIME_INACTIVE_TO_START) {
+			else if (energy_machine->timer_InactiveToStart >= TIME_INACTIVE_TO_START) {
+				// 防御性编程,保证是在正确的状态转移
 				if (energy_machine->state == EM_STATE_INACTIVE ) {
-					energy_machine->timer_InactiveToStart = 0;
+					energy_machine->timer_InactiveToStart = 0;	// 对判断条件进行复位
 					energy_machine->state = EM_STATE_SMALL_IDLE;
 					if (Small_EM_CANSend() != 1) {
 						xTaskNotifyGive(ErrorHandlerTaskHandle);
@@ -284,6 +300,7 @@ void StartHUB75Task(void *argument)
 				}
 			}
 			if (energy_machine->timer_SuccessToIdle == 0) {
+				// 考虑到如果没有获得时间就进入到SUCCESS状态可能会出问题,下面的逻辑应当先调用GetGainTime()后转移状态
 				if (energy_machine->state == EM_STATE_SMALL_SUCCESS || energy_machine->state == EM_STATE_BIG_SUCCESS) {
 					ResetToInactive();
 					continue;
@@ -313,15 +330,19 @@ void StartHUB75Task(void *argument)
 							break;
 						case EM_STATE_SMALL_IDLE:			// 小符待机
 						case EM_STATE_SMALL_ACTIVATING:		// 小符正在激活
+							// 及时复位这个变量
+							energy_machine->timer_2_5s = 0;
 							// 是否正确击打
 							if (IsRightTarget(can_message)) {
-								energy_machine->timer_2_5s = 0;
 								energy_machine->state = EM_STATE_SMALL_ACTIVATING;
 								// 记录环数总和和各个标靶的环数
 								energy_machine->ring[energy_machine->counter - 1] = can_message->data[0];
 								energy_machine->ring_sum += can_message->data[0];
 								// 判断是否满足退出条件
 								if (energy_machine->counter == 5) {
+									energy_machine->counter = 0;	// 对判断条件进行复位
+									energy_machine->timer_20s = 0;	//退出状态前,复位相关变量
+									energy_machine->timer_SuccessToIdle = 0;	//进入状态前,复位相关变量
 									GetGainTime(&energy_machine->timer_SuccessToIdle);
 									energy_machine->state = EM_STATE_SMALL_SUCCESS;
 								}
@@ -336,9 +357,10 @@ void StartHUB75Task(void *argument)
 							break;
 						case EM_STATE_BIG_IDLE:           // 大符待机
 						case EM_STATE_BIG_ACTIVATING_25:  // 大符正在激活 (2.5s阶段)
+							// 及时复位这个变量
+							energy_machine->timer_2_5s = 0;
 							// 是否正确击打
 							if (IsRightTarget(can_message)) {
-								energy_machine->timer_2_5s = 0;
 								energy_machine->state = EM_STATE_BIG_ACTIVATING_1;
 								// 记录环数总和和各个标靶的环数
 								energy_machine->ring[energy_machine->counter - 2] = can_message->data[0];
@@ -347,13 +369,16 @@ void StartHUB75Task(void *argument)
 							}
 							// 错误击打,回到IDLE状态
 							else {
+								energy_machine->timer_1s = 0;	//退出状态前,复位相关变量
 								ResetToIdle(energy_machine);
 							}
 							break;
 						case EM_STATE_BIG_ACTIVATING_1:   // 大符正在激活 (1s阶段)
+							// 及时复位这个变量
+							energy_machine->timer_1s = 0;
 							// 是否正确击打
 							if (IsRightTarget(can_message)) {
-								energy_machine->timer_1s = 0;
+								energy_machine->timer_2_5s = 0;	//进入状态前,复位相关变量
 								energy_machine->state = EM_STATE_BIG_ACTIVATING_25;
 								energy_machine->ring[energy_machine->counter - 1] = can_message->data[0];
 								energy_machine->ring_sum += can_message->data[0];
@@ -361,15 +386,18 @@ void StartHUB75Task(void *argument)
 							}
 							// 错误击打,回到2_5s状态
 							else {
-								energy_machine->timer_1s = 0;
+								energy_machine->timer_2_5s = 0;	//进入状态前,复位相关变量
 								energy_machine->state = EM_STATE_BIG_ACTIVATING_25;
 								energy_machine->ring[energy_machine->counter - 1] = 0;
 								// 无需重置counter_success
 							}
 							// 判断是否满足退出条件
 							if (energy_machine->counter == 10) {
-								energy_machine->state = EM_STATE_BIG_SUCCESS;
+								energy_machine->counter = 0;	// 对判断条件进行复位
+								energy_machine->timer_20s = 0;	//退出状态前,复位相关变量
+								energy_machine->timer_SuccessToIdle = 0;	//进入状态前,复位相关变量
 								GetGainTime(&energy_machine->timer_SuccessToIdle);
+								energy_machine->state = EM_STATE_BIG_SUCCESS;
 								Big_EM_CANSend();
 							}
 							else if (Big_EM_CANSend() != 1) {
