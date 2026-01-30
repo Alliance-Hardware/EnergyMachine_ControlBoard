@@ -71,8 +71,6 @@ uint8_t IsRightTarget(CANMessage* can_message) {
 	return 0;
 }
 
-
-
 void GetGainTime(uint16_t *gain_time) {
 	// 大能量机关增益时间
 	if (energy_machine->state == EM_STATE_BIG_SUCCESS) {
@@ -248,7 +246,7 @@ void StartHUB75Task(void *argument)
 				energy_machine->timer_20s++;
 				break;
 			case EM_STATE_BIG_ACTIVATING_1:   // 大符正在激活 (1s阶段)
-					// 注意:在上述几个状态转移时,及时复位timer_1s
+				// 注意:在上述几个状态转移时,及时复位timer_1s
 				energy_machine->timer_1s++;
 				energy_machine->timer_20s++;
 				break;
