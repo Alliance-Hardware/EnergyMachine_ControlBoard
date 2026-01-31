@@ -54,6 +54,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
 
         ${CMAKE_SOURCE_DIR}/App/Src/HUB75Task.c
         ${CMAKE_SOURCE_DIR}/App/Src/RandomData.c
+        ${CMAKE_SOURCE_DIR}/App/Src/CyclicBuffer.c
         ${CMAKE_SOURCE_DIR}/App/Src/WS2812Task.c
         ${CMAKE_SOURCE_DIR}/App/Src/M3508ControlTask.c
         ${CMAKE_SOURCE_DIR}/App/Src/InitTask.c

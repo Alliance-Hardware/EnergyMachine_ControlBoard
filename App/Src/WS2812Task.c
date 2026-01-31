@@ -5,6 +5,8 @@
 
 void StartWS2812Task(void *argument)
 {
-	osDelay(20000);
-	ws2812_update();
+	for (;;) {
+		osDelay(20000);
+		ws2812_update();
+	}
 }

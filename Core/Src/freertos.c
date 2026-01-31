@@ -89,11 +89,6 @@ const osThreadAttr_t ErrorHandlerTask_attributes = {
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityHigh7,
 };
-/* Definitions for CANToHUBQueue */
-osMessageQueueId_t CANToHUBQueueHandle;
-const osMessageQueueAttr_t CANToHUBQueue_attributes = {
-  .name = "CANToHUBQueue"
-};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -130,10 +125,6 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN RTOS_TIMERS */
   /* start timers, add new ones, ... */
   /* USER CODE END RTOS_TIMERS */
-
-  /* Create the queue(s) */
-  /* creation of CANToHUBQueue */
-  CANToHUBQueueHandle = osMessageQueueNew (16, sizeof(CANMessage*), &CANToHUBQueue_attributes);
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */

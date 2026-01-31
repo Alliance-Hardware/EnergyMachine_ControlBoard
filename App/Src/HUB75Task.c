@@ -6,6 +6,7 @@
 #include "bsp_can.h"
 #include "cmsis_os2.h"
 #include "Config.h"
+#include "CyclicBuffer.h"
 #include "queue.h"
 #include "timer.h"
 #include "RandomData.h"
@@ -13,7 +14,7 @@ EnergyMachine_t em = {0};
 EnergyMachine_t *energy_machine = &em;
 extern osThreadId_t HUB75TaskHandle;
 extern osThreadId_t ErrorHandlerTaskHandle;
-extern osMessageQueueId_t CANToHUBQueueHandle;
+extern CyclicBuffer_t can_message_buffer_handle;
 void EnergyMachine_Init(EnergyMachine_t *machine) {
 	if (machine == NULL) {
 		return;  // 防御性编程，防止空指针
@@ -36,19 +37,12 @@ void EnergyMachine_Init(EnergyMachine_t *machine) {
 
 void HUB75_CAN_RxCallback(uint16_t std_id, uint8_t *data)
 {
-	CANMessage* can_message = pvPortMalloc(sizeof(CANMessage));
-	if (can_message == NULL) {
-		BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-		vTaskNotifyGiveFromISR(ErrorHandlerTaskHandle, &xHigherPriorityTaskWoken);
-		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-		return;
-	}
-	// 拷贝数据
-	can_message->id = std_id;
-	memcpy(can_message->data, data, 8);
-	// 队列发送与任务通知
+	CANMessage_t can_message;
+	can_message.id = std_id;
+	memcpy(can_message.data, data, 8);
+	// 任务通知
 	BaseType_t xHigherPriorityTaskWoken_HUB75 = pdFALSE;
-	if (xQueueSendFromISR(CANToHUBQueueHandle, &can_message, &xHigherPriorityTaskWoken_HUB75) == pdPASS) {
+	if (CyclicBuffer_PutFromISR(&can_message_buffer_handle, &can_message)) {
 		xTaskNotifyFromISR(HUB75TaskHandle, CAN_CALLBACK, eSetBits, &xHigherPriorityTaskWoken_HUB75);
 		portYIELD_FROM_ISR(xHigherPriorityTaskWoken_HUB75);
 	}
@@ -59,8 +53,8 @@ void HUB75_CAN_RxCallback(uint16_t std_id, uint8_t *data)
 	}
 }
 
-uint8_t IsRightTarget(CANMessage* can_message) {
-	uint8_t index = can_message->id - CAN_RECEIVE_BASE_ID;
+uint8_t IsRightTarget(CANMessage_t can_message) {
+	uint8_t index = can_message.id - CAN_RECEIVE_BASE_ID;
 	// 防御性检查
 	if (index >= 3 && index <= 7) {
 		if (index == energy_machine->selected_leaf_ids[index -3]) {
@@ -202,13 +196,9 @@ void ResetToInactive() {
 	// 进入临界区
 	taskENTER_CRITICAL();
 	xTaskNotify(HUB75TaskHandle, RESET_FLAG, eSetBits);
-	CANMessage* can_message;
+	CANMessage_t* can_message;
 	// 清空队列消息
-	while (xQueueReceive(CANToHUBQueueHandle, &can_message, 0) == pdPASS) {
-		if (can_message != NULL) {
-			vPortFree(can_message);
-		}
-	}
+	while (CyclicBuffer_Get(&can_message_buffer_handle, &can_message)){}
 	// 退出临界区
 	taskEXIT_CRITICAL();
 }
@@ -307,9 +297,9 @@ void StartHUB75Task(void *argument)
 		}
 		// 检查是否触发CAN中断
 		if ((pulNotificationValue & CAN_CALLBACK) != 0){
-			CANMessage* can_message;
-			while (xQueueReceive(CANToHUBQueueHandle, &can_message, 0) == pdPASS) {
-				if (can_message->id >= 0x403 && can_message->id <= 0x407) {
+			CANMessage_t can_message;
+			while (CyclicBuffer_Get(&can_message_buffer_handle, &can_message)) {
+				if (can_message.id >= 0x403 && can_message.id <= 0x407) {
 					switch (energy_machine->state)
 					{
 						case EM_STATE_INACTIVE:				// 未激活状态
@@ -334,8 +324,8 @@ void StartHUB75Task(void *argument)
 							if (IsRightTarget(can_message)) {
 								energy_machine->state = EM_STATE_SMALL_ACTIVATING;
 								// 记录环数总和和各个标靶的环数
-								energy_machine->ring[energy_machine->counter - 1] = can_message->data[0];
-								energy_machine->ring_sum += can_message->data[0];
+								energy_machine->ring[energy_machine->counter - 1] = can_message.data[0];
+								energy_machine->ring_sum += can_message.data[0];
 								// 判断是否满足退出条件
 								if (energy_machine->counter == 5) {
 									energy_machine->counter = 0;	// 对判断条件进行复位
@@ -361,8 +351,8 @@ void StartHUB75Task(void *argument)
 							if (IsRightTarget(can_message)) {
 								energy_machine->state = EM_STATE_BIG_ACTIVATING_1;
 								// 记录环数总和和各个标靶的环数
-								energy_machine->ring[energy_machine->counter - 2] = can_message->data[0];
-								energy_machine->ring_sum += can_message->data[0];
+								energy_machine->ring[energy_machine->counter - 2] = can_message.data[0];
+								energy_machine->ring_sum += can_message.data[0];
 								energy_machine->counter_success++;
 							}
 							// 错误击打,回到IDLE状态
@@ -378,8 +368,8 @@ void StartHUB75Task(void *argument)
 							if (IsRightTarget(can_message)) {
 								energy_machine->timer_2_5s = 0;	//进入状态前,复位相关变量
 								energy_machine->state = EM_STATE_BIG_ACTIVATING_25;
-								energy_machine->ring[energy_machine->counter - 1] = can_message->data[0];
-								energy_machine->ring_sum += can_message->data[0];
+								energy_machine->ring[energy_machine->counter - 1] = can_message.data[0];
+								energy_machine->ring_sum += can_message.data[0];
 								energy_machine->counter_success++;
 							}
 							// 错误击打,回到2_5s状态
@@ -408,7 +398,6 @@ void StartHUB75Task(void *argument)
 							break;
 					}
 				}
-				vPortFree(can_message);
 			}
 		}
 	}

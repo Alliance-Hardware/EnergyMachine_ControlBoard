@@ -35,7 +35,7 @@ typedef struct {
 typedef struct{
 	uint16_t id;
 	uint8_t data[8];
-}CANMessage;
+}CANMessage_t;
 // 全局变量声明
 extern EnergyMachine_t *energy_machine;
 // 函数声明
