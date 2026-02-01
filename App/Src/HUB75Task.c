@@ -123,7 +123,7 @@ void Success_CANSend(uint8_t flag) {
 	uint8_t disable_data[8] = {0};
 	uint8_t tx_data[8] = {0};
 	uint16_t id = CAN_ID;
-	uint8_t color = BLUE;
+	Color_t color = COLOR_BLUE;
 	if (energy_machine->state == EM_STATE_SMALL_SUCCESS) {
 		tx_data[0] = SMALL_EM;
 		tx_data[1] = color;
