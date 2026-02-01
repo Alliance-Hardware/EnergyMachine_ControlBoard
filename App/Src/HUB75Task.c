@@ -265,8 +265,8 @@ void StartHUB75Task(void *argument)
 					energy_machine->counter = 0;	// 对判断条件进行复位
 					energy_machine->timer_20s = 0;	//退出状态前,复位相关变量
 					energy_machine->timer_SuccessToIdle = 0;	//进入状态前,复位相关变量
-					GetGainTime(&energy_machine->timer_SuccessToIdle);
 					energy_machine->state = EM_STATE_BIG_SUCCESS;
+					GetGainTime(&energy_machine->timer_SuccessToIdle);
 					Big_EM_CANSend();
 				}
 				else {
@@ -288,7 +288,6 @@ void StartHUB75Task(void *argument)
 				}
 			}
 			if (energy_machine->timer_SuccessToIdle == 0) {
-				// 考虑到如果没有获得时间就进入到SUCCESS状态可能会出问题,下面的逻辑应当先调用GetGainTime()后转移状态
 				if (energy_machine->state == EM_STATE_SMALL_SUCCESS || energy_machine->state == EM_STATE_BIG_SUCCESS) {
 					ResetToInactive();
 					continue;
@@ -331,8 +330,8 @@ void StartHUB75Task(void *argument)
 									energy_machine->counter = 0;	// 对判断条件进行复位
 									energy_machine->timer_20s = 0;	//退出状态前,复位相关变量
 									energy_machine->timer_SuccessToIdle = 0;	//进入状态前,复位相关变量
-									GetGainTime(&energy_machine->timer_SuccessToIdle);
 									energy_machine->state = EM_STATE_SMALL_SUCCESS;
+									GetGainTime(&energy_machine->timer_SuccessToIdle);
 								}
 								else if (Small_EM_CANSend() == 0) {
 									xTaskNotifyGive(ErrorHandlerTaskHandle);
@@ -384,8 +383,8 @@ void StartHUB75Task(void *argument)
 								energy_machine->counter = 0;	// 对判断条件进行复位
 								energy_machine->timer_20s = 0;	//退出状态前,复位相关变量
 								energy_machine->timer_SuccessToIdle = 0;	//进入状态前,复位相关变量
-								GetGainTime(&energy_machine->timer_SuccessToIdle);
 								energy_machine->state = EM_STATE_BIG_SUCCESS;
+								GetGainTime(&energy_machine->timer_SuccessToIdle);
 								Big_EM_CANSend();
 							}
 							else if (Big_EM_CANSend() != 1) {
