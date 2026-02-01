@@ -4,6 +4,8 @@
 #define CAN_RECEIVE_BASE_ID 0x400
 #define SMALL_EM			0xAA
 #define BIG_EM				0xBB
+#define BLUE				0xCC
+#define RED					0xDD
 #define Display_Disable		0x00
 #define Display_Enable		0xFF
 #define Ring_1				0X01

@@ -59,7 +59,7 @@ uint8_t IsRightTarget(CANMessage_t can_message) {
 	if (index >= 3 && index <= 7) {
 		if (index == energy_machine->selected_leaf_ids[index -3]) {
 			energy_machine->selected_leaf_ids[index -3] = 0;
-			return 1;
+			return index;
 		}
 	}
 	return 0;
@@ -104,10 +104,36 @@ uint8_t Small_EM_CANSend() {
 
 uint8_t Big_EM_CANSend() {
 	uint8_t tx_data[8] = {0};
-	uint16_t id = CAN_ID;
 	tx_data[0] = BIG_EM;
-	// 这里不是显示平均环数,而是显示对应增益的平均环数区间的向上取值(也就是说会比打出的平均环数更大)
+	if (GetRandomData(energy_machine->unselected_leaf_ids, energy_machine->result_leaf_ids, 2) == 2) {
+		uint16_t id = CAN_ID;
+		energy_machine->selected_leaf_ids[energy_machine->result_leaf_ids[0] - 3] = energy_machine->result_leaf_ids[0];
+		energy_machine->selected_leaf_ids[energy_machine->result_leaf_ids[1] - 3] = energy_machine->result_leaf_ids[1];
+		energy_machine->counter = energy_machine->counter + 2;
+
+		tx_data[energy_machine->result_leaf_ids[0]] = 0xFF;
+		tx_data[energy_machine->result_leaf_ids[1]] = 0xFF;
+		BSP_CAN_SendMsg(&hcan1, id, tx_data);
+		return 1;
+	}
+	return 0;
+}
+
+void Success_CANSend(uint8_t flag) {
+	uint8_t disable_data[8] = {0};
+	uint8_t tx_data[8] = {0};
+	uint16_t id = CAN_ID;
+	uint8_t color = BLUE;
+	if (energy_machine->state == EM_STATE_SMALL_SUCCESS) {
+		tx_data[0] = SMALL_EM;
+		tx_data[1] = color;
+		memcpy(&tx_data[3], &energy_machine->ring[3], 5);
+	}
 	if (energy_machine->state == EM_STATE_BIG_SUCCESS) {
+		tx_data[0] = BIG_EM;
+		tx_data[1] = color;
+		bool error_flag = true;
+		// 这里不是显示平均环数,而是显示对应增益的平均环数区间的向上取值(也就是说会比打出的平均环数更大)
 		float average_ring = (float)energy_machine->ring_sum / (float)energy_machine->counter_success;
 		// 定义(攻击增益, 防御增益, 热量冷却增益)
 		if (average_ring >= 1 && average_ring <= 3) {
@@ -130,23 +156,20 @@ uint8_t Big_EM_CANSend() {
 			// (300%, 50%, 500%)
 			memset(&tx_data[3], Ring_10, 5);
 		}
-		// 避免未经赋值的tx_data发送
-		if (tx_data[7] != 0) {
-			BSP_CAN_SendMsg(&hcan1, id, tx_data);
+		else {
+			error_flag = false;
 		}
-		return 1;
+		// 避免未经赋值的tx_data发送
+		if (!error_flag) {
+			return;
+		}
 	}
-	if (GetRandomData(energy_machine->unselected_leaf_ids, energy_machine->result_leaf_ids, 2) == 2) {
-		energy_machine->selected_leaf_ids[energy_machine->result_leaf_ids[0] - 3] = energy_machine->result_leaf_ids[0];
-		energy_machine->selected_leaf_ids[energy_machine->result_leaf_ids[1] - 3] = energy_machine->result_leaf_ids[1];
-		energy_machine->counter = energy_machine->counter + 2;
-
-		tx_data[energy_machine->result_leaf_ids[0]] = 0xFF;
-		tx_data[energy_machine->result_leaf_ids[1]] = 0xFF;
+	if (flag % 2 == 0) {	// 偶数
+		BSP_CAN_SendMsg(&hcan1, id, disable_data);
+	}
+	else {	//奇数
 		BSP_CAN_SendMsg(&hcan1, id, tx_data);
-		return 1;
 	}
-	return 0;
 }
 
 void ResetToIdle(EnergyMachine_t *machine) {
@@ -205,6 +228,7 @@ void ResetToInactive() {
 
 void StartHUB75Task(void *argument)
 {
+	static uint16_t counter = 0;
 	for (;;) {
 		uint32_t pulNotificationValue = 0;
 		// 等待任务通知
@@ -244,6 +268,12 @@ void StartHUB75Task(void *argument)
 			case EM_STATE_BIG_SUCCESS:		 // 大符激活成功
 				if (energy_machine->timer_SuccessToIdle) {
 					energy_machine->timer_SuccessToIdle--;
+					if (counter % 150 == 0) {
+						Success_CANSend(counter / 150);
+					}
+					if (counter <= 2850) {
+						counter++;
+					}
 				}
 				break;
 			default:
@@ -267,7 +297,7 @@ void StartHUB75Task(void *argument)
 					energy_machine->timer_SuccessToIdle = 0;	//进入状态前,复位相关变量
 					energy_machine->state = EM_STATE_BIG_SUCCESS;
 					GetGainTime(&energy_machine->timer_SuccessToIdle);
-					Big_EM_CANSend();
+					counter = 0;
 				}
 				else {
 					energy_machine->timer_2_5s = 0;		//退出状态前,复位相关变量
@@ -320,10 +350,11 @@ void StartHUB75Task(void *argument)
 							// 及时复位这个变量
 							energy_machine->timer_2_5s = 0;
 							// 是否正确击打
-							if (IsRightTarget(can_message)) {
+							uint8_t index = IsRightTarget(can_message);
+							if (index) {
 								energy_machine->state = EM_STATE_SMALL_ACTIVATING;
 								// 记录环数总和和各个标靶的环数
-								energy_machine->ring[energy_machine->counter - 1] = can_message.data[0];
+								energy_machine->ring[index] = can_message.data[0];
 								energy_machine->ring_sum += can_message.data[0];
 								// 判断是否满足退出条件
 								if (energy_machine->counter == 5) {
@@ -332,6 +363,7 @@ void StartHUB75Task(void *argument)
 									energy_machine->timer_SuccessToIdle = 0;	//进入状态前,复位相关变量
 									energy_machine->state = EM_STATE_SMALL_SUCCESS;
 									GetGainTime(&energy_machine->timer_SuccessToIdle);
+									counter = 0;
 								}
 								else if (Small_EM_CANSend() == 0) {
 									xTaskNotifyGive(ErrorHandlerTaskHandle);
@@ -385,7 +417,7 @@ void StartHUB75Task(void *argument)
 								energy_machine->timer_SuccessToIdle = 0;	//进入状态前,复位相关变量
 								energy_machine->state = EM_STATE_BIG_SUCCESS;
 								GetGainTime(&energy_machine->timer_SuccessToIdle);
-								Big_EM_CANSend();
+								counter = 0;
 							}
 							else if (Big_EM_CANSend() != 1) {
 								xTaskNotifyGive(ErrorHandlerTaskHandle);
