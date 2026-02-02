@@ -1,7 +1,9 @@
 #include "FreeRTOS.h"
 #include "RandomData.h"
 #include <stdlib.h>
+#include "timer.h"
 uint8_t GetRandomData(uint8_t* in, uint8_t* out, uint8_t num) {
+    srand(get_time());      //每次进入重新初始化种子,避免每次上电首次小能量机关显示相同顺序
     // ==================== 第一部分：参数检查 ====================
     // 参数检查：确保n的值在有效范围内（1或2）
     // 如果n为0或大于2，说明参数错误

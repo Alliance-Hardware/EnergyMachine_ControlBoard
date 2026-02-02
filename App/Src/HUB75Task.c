@@ -88,6 +88,7 @@ uint8_t Small_EM_CANSend() {
 	tx_data[0] = SMALL_EM;
 	if (GetRandomData(energy_machine->unselected_leaf_ids, energy_machine->result_leaf_ids, 1) == 1) {
 		uint16_t id = CAN_ID;
+		memcpy(&tx_data[3], &energy_machine->ring[3], 5);
 		// 把unselected_leaf_ids对应的数据复制到selected_leaf_ids
 		energy_machine->selected_leaf_ids[energy_machine->result_leaf_ids[0] - 3] = energy_machine->result_leaf_ids[0];
 		// 然后把unselected_leaf_ids数据重新置位为0.
@@ -102,17 +103,28 @@ uint8_t Small_EM_CANSend() {
 	return 0;
 }
 
-uint8_t Big_EM_CANSend() {
-	uint8_t tx_data[8] = {0};
-	tx_data[0] = BIG_EM;
-	if (GetRandomData(energy_machine->unselected_leaf_ids, energy_machine->result_leaf_ids, 2) == 2) {
+uint8_t Big_EM_CANSend(uint8_t index) {
+	if (!index) {
+		uint8_t tx_data[8] = {0};
+		tx_data[0] = BIG_EM;
+		if (GetRandomData(energy_machine->unselected_leaf_ids, energy_machine->result_leaf_ids, 2) == 2) {
+			uint16_t id = CAN_ID;
+			energy_machine->selected_leaf_ids[energy_machine->result_leaf_ids[0] - 3] = energy_machine->result_leaf_ids[0];
+			energy_machine->selected_leaf_ids[energy_machine->result_leaf_ids[1] - 3] = energy_machine->result_leaf_ids[1];
+			energy_machine->counter = energy_machine->counter + 2;
+			tx_data[energy_machine->result_leaf_ids[0]] = 0xFF;
+			tx_data[energy_machine->result_leaf_ids[1]] = 0xFF;
+			BSP_CAN_SendMsg(&hcan1, id, tx_data);
+			return 1;
+		}
+	}
+	else {
+		uint8_t tx_data[8] = {0};
+		tx_data[0] = BIG_EM;
 		uint16_t id = CAN_ID;
-		energy_machine->selected_leaf_ids[energy_machine->result_leaf_ids[0] - 3] = energy_machine->result_leaf_ids[0];
-		energy_machine->selected_leaf_ids[energy_machine->result_leaf_ids[1] - 3] = energy_machine->result_leaf_ids[1];
-		energy_machine->counter = energy_machine->counter + 2;
-
-		tx_data[energy_machine->result_leaf_ids[0]] = 0xFF;
-		tx_data[energy_machine->result_leaf_ids[1]] = 0xFF;
+		energy_machine->selected_leaf_ids[index - 3] = 0x00;
+		for (index = 0; energy_machine->selected_leaf_ids[index] == 0 && index < 5; index++) {}
+		tx_data[index + 3] = 0xFF;
 		BSP_CAN_SendMsg(&hcan1, id, tx_data);
 		return 1;
 	}
@@ -206,7 +218,7 @@ void ResetToIdle(EnergyMachine_t *machine) {
 		case EM_STATE_BIG_IDLE:           // 大符待机
 		case EM_STATE_BIG_ACTIVATING_25:  // 大符正在激活 (2.5s阶段)
 			machine->state = EM_STATE_BIG_IDLE;
-			if (Big_EM_CANSend() != 1) {
+			if (Big_EM_CANSend(0) != 1) {
 				xTaskNotifyGive(ErrorHandlerTaskHandle);
 			}
 			break;
@@ -302,7 +314,7 @@ void StartHUB75Task(void *argument)
 				else {
 					energy_machine->timer_2_5s = 0;		//退出状态前,复位相关变量
 					energy_machine->state = EM_STATE_BIG_ACTIVATING_25;
-					if (Big_EM_CANSend() != 1) {
+					if (Big_EM_CANSend(0) != 1) {
 						xTaskNotifyGive(ErrorHandlerTaskHandle);
 					}
 				}
@@ -327,6 +339,7 @@ void StartHUB75Task(void *argument)
 		// 检查是否触发CAN中断
 		if ((pulNotificationValue & CAN_CALLBACK) != 0){
 			CANMessage_t can_message;
+			uint8_t index = 0;
 			while (CyclicBuffer_Get(&can_message_buffer_handle, &can_message)) {
 				if (can_message.id >= 0x403 && can_message.id <= 0x407) {
 					switch (energy_machine->state)
@@ -340,7 +353,7 @@ void StartHUB75Task(void *argument)
 							if (energy_machine->timer_InactiveToStart >= 500) {
 								energy_machine->timer_InactiveToStart = 0;
 								energy_machine->state = EM_STATE_BIG_IDLE;
-								if (Big_EM_CANSend() != 1) {
+								if (Big_EM_CANSend(0) != 1) {
 									xTaskNotifyGive(ErrorHandlerTaskHandle);
 								}
 							}
@@ -350,7 +363,7 @@ void StartHUB75Task(void *argument)
 							// 及时复位这个变量
 							energy_machine->timer_2_5s = 0;
 							// 是否正确击打
-							uint8_t index = IsRightTarget(can_message);
+							index = IsRightTarget(can_message);
 							if (index) {
 								energy_machine->state = EM_STATE_SMALL_ACTIVATING;
 								// 记录环数总和和各个标靶的环数
@@ -379,12 +392,16 @@ void StartHUB75Task(void *argument)
 							// 及时复位这个变量
 							energy_machine->timer_2_5s = 0;
 							// 是否正确击打
-							if (IsRightTarget(can_message)) {
-								energy_machine->state = EM_STATE_BIG_ACTIVATING_1;
+							index = IsRightTarget(can_message);
+							if (index) {
 								// 记录环数总和和各个标靶的环数
+								energy_machine->state = EM_STATE_BIG_ACTIVATING_1;
 								energy_machine->ring[energy_machine->counter - 2] = can_message.data[0];
 								energy_machine->ring_sum += can_message.data[0];
 								energy_machine->counter_success++;
+								if (Big_EM_CANSend(index) != 1) {
+									xTaskNotifyGive(ErrorHandlerTaskHandle);
+								}
 							}
 							// 错误击打,回到IDLE状态
 							else {
@@ -419,7 +436,7 @@ void StartHUB75Task(void *argument)
 								GetGainTime(&energy_machine->timer_SuccessToIdle);
 								counter = 0;
 							}
-							else if (Big_EM_CANSend() != 1) {
+							else if (Big_EM_CANSend(0) != 1) {
 								xTaskNotifyGive(ErrorHandlerTaskHandle);
 							}
 							break;
