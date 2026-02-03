@@ -34,6 +34,9 @@ void EnergyMachine_Init(EnergyMachine_t *machine) {
 	memcpy(machine->unselected_leaf_ids, init_ids, sizeof(init_ids));
 	memset(machine->ring, 0, sizeof(machine->ring));
 }
+void EnergyMachine_Color_Init(EnergyMachine_t *machine, Color_t color) {
+	machine->color = color;
+}
 
 void HUB75_CAN_RxCallback(uint16_t std_id, uint8_t *data)
 {
@@ -86,6 +89,7 @@ void Init_CANSend() {
 uint8_t Small_EM_CANSend() {
 	uint8_t tx_data[8] = {0};
 	tx_data[0] = SMALL_EM;
+	tx_data[1] = energy_machine->color;
 	if (GetRandomData(energy_machine->unselected_leaf_ids, energy_machine->result_leaf_ids, 1) == 1) {
 		uint16_t id = CAN_ID;
 		memcpy(&tx_data[3], &energy_machine->ring[3], 5);
@@ -107,6 +111,7 @@ uint8_t Big_EM_CANSend(uint8_t index) {
 	if (!index) {
 		uint8_t tx_data[8] = {0};
 		tx_data[0] = BIG_EM;
+		tx_data[1] = energy_machine->color;
 		if (GetRandomData(energy_machine->unselected_leaf_ids, energy_machine->result_leaf_ids, 2) == 2) {
 			uint16_t id = CAN_ID;
 			energy_machine->selected_leaf_ids[energy_machine->result_leaf_ids[0] - 3] = energy_machine->result_leaf_ids[0];
@@ -135,15 +140,14 @@ void Success_CANSend(uint8_t flag) {
 	uint8_t disable_data[8] = {0};
 	uint8_t tx_data[8] = {0};
 	uint16_t id = CAN_ID;
-	Color_t color = COLOR_BLUE;
 	if (energy_machine->state == EM_STATE_SMALL_SUCCESS) {
 		tx_data[0] = SMALL_EM;
-		tx_data[1] = color;
+		tx_data[1] = energy_machine->color;
 		memcpy(&tx_data[3], &energy_machine->ring[3], 5);
 	}
 	if (energy_machine->state == EM_STATE_BIG_SUCCESS) {
 		tx_data[0] = BIG_EM;
-		tx_data[1] = color;
+		tx_data[1] = energy_machine->color;
 		bool error_flag = true;
 		// 这里不是显示平均环数,而是显示对应增益的平均环数区间的向上取值(也就是说会比打出的平均环数更大)
 		float average_ring = (float)energy_machine->ring_sum / (float)energy_machine->counter_success;
@@ -342,6 +346,20 @@ void StartHUB75Task(void *argument)
 			uint8_t index = 0;
 			while (CyclicBuffer_Get(&can_message_buffer_handle, &can_message)) {
 				if (can_message.id >= 0x403 && can_message.id <= 0x407) {
+					switch (can_message.data[0]) {
+						case COLOR_BLUE:
+						case COLOR_GREEN:
+						case COLOR_RED:
+							energy_machine->color = can_message.data[0];
+							uint8_t tx_data[8] = {0};
+							tx_data[1] = energy_machine->color;
+							memset(&tx_data[3], 0xFF, 5);
+							counter = 0;
+							energy_machine->state = EM_STATE_SMALL_SUCCESS;
+							energy_machine->timer_SuccessToIdle = 1000;
+						continue;
+						default:break;
+					}
 					switch (energy_machine->state)
 					{
 						case EM_STATE_INACTIVE:				// 未激活状态

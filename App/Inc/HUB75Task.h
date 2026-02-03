@@ -2,6 +2,8 @@
 #define STM32F105_FR_HUB75TASK_H
 #include <stdint.h>
 #include <stdbool.h>
+
+#include "Config.h"
 #define CAN_CALLBACK (1 << 0)
 #define TIMER_CALLBACK (1 << 1)
 #define RESET_FLAG (1 << 2)
@@ -19,6 +21,7 @@ typedef enum {
 // 全局状态机结构体
 typedef struct {
 	EnergyMachine_State_t state;	// 激活状态
+	Color_t color;					// 显示颜色
 	uint8_t counter;				// 记录显示过的符叶总数
 	uint8_t counter_success;		// 记录成功击打的符叶数量
 	uint8_t ring_sum;			    // 记录打击环数和
@@ -40,6 +43,7 @@ typedef struct{
 extern EnergyMachine_t *energy_machine;
 // 函数声明
 void EnergyMachine_Init(EnergyMachine_t *machine);
+void EnergyMachine_Color_Init(EnergyMachine_t *machine, Color_t color);
 void HUB75_CAN_RxCallback(uint16_t std_id, uint8_t *data);
 void HUB_TIM_CallBack(void);
 void HUB75_Init(void);

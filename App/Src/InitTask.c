@@ -15,5 +15,6 @@ void StartInitTask(void *argument){
 	m3508_init();
 	timer_init();
 	EnergyMachine_Init(energy_machine);
+	EnergyMachine_Color_Init(energy_machine, COLOR_BLUE);
 	vTaskDelete(NULL);
 }
