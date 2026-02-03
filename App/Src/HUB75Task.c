@@ -14,6 +14,7 @@ EnergyMachine_t em = {0};
 EnergyMachine_t *energy_machine = &em;
 extern osThreadId_t HUB75TaskHandle;
 extern osThreadId_t ErrorHandlerTaskHandle;
+extern osThreadId_t WS2812TaskHandle;
 extern CyclicBuffer_t can_message_buffer_handle;
 void EnergyMachine_Init(EnergyMachine_t *machine) {
 	if (machine == NULL) {
@@ -316,12 +317,17 @@ void StartHUB75Task(void *argument)
 					counter = 0;
 				}
 				else {
-					energy_machine->timer_2_5s = 0;		//退出状态前,复位相关变量
+					energy_machine->timer_2_5s = 0;		// 退出状态前,复位相关变量
 					energy_machine->state = EM_STATE_BIG_ACTIVATING_25;
 					if (Big_EM_CANSend(0) != 1) {
 						xTaskNotifyGive(ErrorHandlerTaskHandle);
 					}
 				}
+			}
+			else if (energy_machine->timer_InactiveToStart == 500){	// 500ms后关闭显示
+				uint8_t tx_data[8] = {0};
+				uint16_t id = CAN_ID;
+				BSP_CAN_SendMsg(&hcan1, id, tx_data);
 			}
 			else if (energy_machine->timer_InactiveToStart >= TIME_INACTIVE_TO_START) {
 				// 防御性编程,保证是在正确的状态转移
@@ -357,6 +363,7 @@ void StartHUB75Task(void *argument)
 							counter = 0;
 							energy_machine->state = EM_STATE_SMALL_SUCCESS;
 							energy_machine->timer_SuccessToIdle = 1000;
+							xTaskNotify(WS2812TaskHandle, energy_machine->color, eSetValueWithOverwrite);
 						continue;
 						default:break;
 					}
@@ -366,6 +373,12 @@ void StartHUB75Task(void *argument)
 							//初次击打,启动定时器
 							if (energy_machine->timer_InactiveToStart == 0) {
 								energy_machine->timer_InactiveToStart = 1;
+								// 击打后显示500ms
+								uint8_t tx_data[8] = {0};
+								uint16_t id = CAN_ID;
+								tx_data[0] = SMALL_EM;
+								tx_data[1] = energy_machine->color;
+								BSP_CAN_SendMsg(&hcan1, id, tx_data);
 							}
 							// 延时500ms滤波,若500ms后再次击打,进入大能量机关状态.
 							if (energy_machine->timer_InactiveToStart >= 500) {

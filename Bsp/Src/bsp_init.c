@@ -38,6 +38,6 @@ void timer_init()
 
 void ws2812_init()
 {
-	ws2812_set_all(0X0000FF);//蓝色
+	ws2812_set_all(0X0000AA);//蓝色
 	ws2812_update();//更新显示
 }
