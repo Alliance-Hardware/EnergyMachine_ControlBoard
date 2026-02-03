@@ -65,6 +65,7 @@ uint8_t IsRightTarget(CANMessage_t can_message) {
 			energy_machine->selected_leaf_ids[index -3] = 0;
 			return index;
 		}
+		memset(energy_machine->selected_leaf_ids, 0, sizeof(energy_machine->selected_leaf_ids));
 	}
 	return 0;
 }
@@ -72,11 +73,11 @@ uint8_t IsRightTarget(CANMessage_t can_message) {
 void GetGainTime(uint16_t *gain_time) {
 	// 大能量机关增益时间
 	if (energy_machine->state == EM_STATE_BIG_SUCCESS) {
-		*gain_time = energy_machine->counter_success * 1000;
+		*gain_time = energy_machine->counter_success * 2000;
 	}
 	// 小能量机关增益时间
 	else if (energy_machine->state == EM_STATE_SMALL_SUCCESS) {
-		*gain_time = 5000;
+		*gain_time = 10000;
 	}
 }
 
@@ -132,7 +133,6 @@ uint8_t Big_EM_CANSend(uint8_t index) {
 		for (index = 0; energy_machine->selected_leaf_ids[index] == 0 && index < 5; index++) {}
 		tx_data[index + 3] = 0xFF;
 		BSP_CAN_SendMsg(&hcan1, id, tx_data);
-		memset(energy_machine->selected_leaf_ids, 0, 5);
 		return 1;
 	}
 	return 0;
@@ -196,6 +196,7 @@ void ResetToIdle(EnergyMachine_t *machine) {
 		case EM_STATE_SMALL_ACTIVATING:   // 小符正在激活
 		case EM_STATE_BIG_IDLE:           // 大符待机
 		case EM_STATE_BIG_ACTIVATING_25:  // 大符正在激活 (2.5s阶段)
+		case EM_STATE_BIG_ACTIVATING_1:  // 大符正在激活 (1s阶段)
 			break;
 		default:
 			return;
@@ -223,6 +224,7 @@ void ResetToIdle(EnergyMachine_t *machine) {
 			break;
 		case EM_STATE_BIG_IDLE:           // 大符待机
 		case EM_STATE_BIG_ACTIVATING_25:  // 大符正在激活 (2.5s阶段)
+		case EM_STATE_BIG_ACTIVATING_1:  // 大符正在激活 (1s阶段)
 			machine->state = EM_STATE_BIG_IDLE;
 			if (Big_EM_CANSend(0) != 1) {
 				xTaskNotifyGive(ErrorHandlerTaskHandle);
@@ -309,6 +311,7 @@ void StartHUB75Task(void *argument)
 			}
 			else if (energy_machine->timer_1s >= TIME_1S_MS) {
 				energy_machine->timer_1s = 0;		// 对判断条件进行复位
+				memset(energy_machine->selected_leaf_ids, 0, sizeof(energy_machine->selected_leaf_ids));	// 清理垃圾数据
 				if (energy_machine->counter == 10) {
 					energy_machine->counter = 0;	// 对判断条件进行复位
 					energy_machine->timer_20s = 0;	//退出状态前,复位相关变量
@@ -451,25 +454,23 @@ void StartHUB75Task(void *argument)
 								energy_machine->ring[energy_machine->counter - 1] = can_message.data[0];
 								energy_machine->ring_sum += can_message.data[0];
 								energy_machine->counter_success++;
+								// 判断是否满足退出条件
+								if (energy_machine->counter == 10) {
+									energy_machine->counter = 0;	// 对判断条件进行复位
+									energy_machine->timer_20s = 0;	//退出状态前,复位相关变量
+									energy_machine->timer_SuccessToIdle = 0;	//进入状态前,复位相关变量
+									energy_machine->state = EM_STATE_BIG_SUCCESS;
+									GetGainTime(&energy_machine->timer_SuccessToIdle);
+									counter = 0;
+								}
+								else if (Big_EM_CANSend(0) != 1) {
+									xTaskNotifyGive(ErrorHandlerTaskHandle);
+								}
 							}
-							// 错误击打,回到2_5s状态
+							// 错误击打,回到IDLE状态
 							else {
 								energy_machine->timer_2_5s = 0;	//进入状态前,复位相关变量
-								energy_machine->state = EM_STATE_BIG_ACTIVATING_25;
-								energy_machine->ring[energy_machine->counter - 1] = 0;
-								// 无需重置counter_success
-							}
-							// 判断是否满足退出条件
-							if (energy_machine->counter == 10) {
-								energy_machine->counter = 0;	// 对判断条件进行复位
-								energy_machine->timer_20s = 0;	//退出状态前,复位相关变量
-								energy_machine->timer_SuccessToIdle = 0;	//进入状态前,复位相关变量
-								energy_machine->state = EM_STATE_BIG_SUCCESS;
-								GetGainTime(&energy_machine->timer_SuccessToIdle);
-								counter = 0;
-							}
-							else if (Big_EM_CANSend(0) != 1) {
-								xTaskNotifyGive(ErrorHandlerTaskHandle);
+								ResetToIdle(energy_machine);
 							}
 							break;
 						case EM_STATE_SMALL_SUCCESS:      // 小符激活成功
