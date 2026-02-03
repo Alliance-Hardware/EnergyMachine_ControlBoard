@@ -132,6 +132,7 @@ uint8_t Big_EM_CANSend(uint8_t index) {
 		for (index = 0; energy_machine->selected_leaf_ids[index] == 0 && index < 5; index++) {}
 		tx_data[index + 3] = 0xFF;
 		BSP_CAN_SendMsg(&hcan1, id, tx_data);
+		memset(energy_machine->selected_leaf_ids, 0, 5);
 		return 1;
 	}
 	return 0;
