@@ -271,7 +271,7 @@ void M3508_SendAll(void)
 	if (g_motors[0] != NULL && g_motors[0]->can_send != NULL)
 	{
 		g_motors[0]->can_send(M3508_CTRL_ID1, data1);
-		g_motors[0]->can_send(M3508_CTRL_ID2, data2);
+		// g_motors[0]->can_send(M3508_CTRL_ID2, data2);
 	}
 }
 
