@@ -71,14 +71,28 @@ uint8_t IsRightTarget(CANMessage_t can_message) {
 }
 
 void GetGainTime(uint16_t *gain_time) {
-	// 大能量机关增益时间
-	if (energy_machine->state == EM_STATE_BIG_SUCCESS) {
-		*gain_time = energy_machine->counter_success * 2000;
-	}
-	// 小能量机关增益时间
-	else if (energy_machine->state == EM_STATE_SMALL_SUCCESS) {
-		*gain_time = 10000;
-	}
+	switch (energy_machine->counter_success) {
+		case 5:
+			energy_machine->timer_SuccessToIdle = 30000;	// 30s
+			break;
+		case 6:
+			energy_machine->timer_SuccessToIdle = 35000;	// 35s
+			break;
+		case 7:
+			energy_machine->timer_SuccessToIdle = 40000;	// 40s
+			break;
+		case 8:
+			energy_machine->timer_SuccessToIdle = 45000;	// 45s
+			break;
+		case 9:
+			energy_machine->timer_SuccessToIdle = 50000;	// 50s
+			break;
+		case 10:
+			energy_machine->timer_SuccessToIdle = 60000;	// 60s
+			break;
+		default:
+			break;
+		}
 }
 
 void Init_CANSend() {
@@ -475,6 +489,8 @@ void StartHUB75Task(void *argument)
 							break;
 						case EM_STATE_SMALL_SUCCESS:      // 小符激活成功
 						case EM_STATE_BIG_SUCCESS:		 // 大符激活成功
+							counter = 0;
+							ResetToInactive();		// 可以提前重置能量机关,方便下次击打
 						default:
 							break;
 					}
