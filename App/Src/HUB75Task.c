@@ -116,7 +116,7 @@ uint8_t Small_EM_CANSend() {
 		// 计数器自增
 		energy_machine->counter++;
 		// 对应的符叶设定为显示标靶并发送
-		tx_data[energy_machine->result_leaf_ids[0]] = 0xFF;
+		tx_data[energy_machine->result_leaf_ids[0]] = Energy_Mechanism;
 		BSP_CAN_SendMsg(&hcan1, id, tx_data);
 		return 1;
 	}
@@ -133,8 +133,8 @@ uint8_t Big_EM_CANSend(uint8_t index) {
 			energy_machine->selected_leaf_ids[energy_machine->result_leaf_ids[0] - 3] = energy_machine->result_leaf_ids[0];
 			energy_machine->selected_leaf_ids[energy_machine->result_leaf_ids[1] - 3] = energy_machine->result_leaf_ids[1];
 			energy_machine->counter = energy_machine->counter + 2;
-			tx_data[energy_machine->result_leaf_ids[0]] = 0xFF;
-			tx_data[energy_machine->result_leaf_ids[1]] = 0xFF;
+			tx_data[energy_machine->result_leaf_ids[0]] = Energy_Mechanism;
+			tx_data[energy_machine->result_leaf_ids[1]] = Energy_Mechanism;
 			BSP_CAN_SendMsg(&hcan1, id, tx_data);
 			return 1;
 		}
@@ -145,7 +145,7 @@ uint8_t Big_EM_CANSend(uint8_t index) {
 		uint16_t id = CAN_ID;
 		energy_machine->selected_leaf_ids[index - 3] = 0x00;
 		for (index = 0; energy_machine->selected_leaf_ids[index] == 0 && index < 5; index++) {}
-		tx_data[index + 3] = 0xFF;
+		tx_data[index + 3] = Energy_Mechanism;
 		BSP_CAN_SendMsg(&hcan1, id, tx_data);
 		return 1;
 	}
@@ -377,7 +377,7 @@ void StartHUB75Task(void *argument)
 							energy_machine->color = can_message.data[0];
 							uint8_t tx_data[8] = {0};
 							tx_data[1] = energy_machine->color;
-							memset(&tx_data[3], 0xFF, 5);
+							memset(&tx_data[3], Energy_Mechanism, 5);
 							counter = 0;
 							energy_machine->state = EM_STATE_SMALL_SUCCESS;
 							energy_machine->timer_SuccessToIdle = 1000;

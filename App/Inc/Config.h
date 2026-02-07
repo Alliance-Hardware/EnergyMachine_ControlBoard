@@ -5,7 +5,6 @@
 #define SMALL_EM			0xAA
 #define BIG_EM				0xBB
 #define Display_Disable		0x00
-#define Display_Enable		0xFF
 #define Ring_1				0X01
 #define Ring_2				0x02
 #define Ring_3				0x03
@@ -16,7 +15,7 @@
 #define Ring_8				0x08
 #define Ring_9				0x09
 #define Ring_10				0x0A
-
+#define Energy_Mechanism	0xFF
 // 颜色定义
 typedef enum {
 	COLOR_RED = 0xC0,
